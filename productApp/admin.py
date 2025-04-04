@@ -1,3 +1,13 @@
 from django.contrib import admin
+from productApp.models import Product
+from unfold.admin import ModelAdmin
 
-# Register your models here.
+@admin.register(Product)
+class ProductAdmin(ModelAdmin):
+    list_display = [
+        'name',
+        'product_type',
+        'price'
+    ]
+
+

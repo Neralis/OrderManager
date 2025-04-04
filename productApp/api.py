@@ -6,12 +6,12 @@ from productApp.schemas import ProductIn, ProductOut
 # Роутер для всех эндпоинтов, относящихся к товарам
 product_router = Router(tags=['Товары'])
 
-@product_router.get('/products', response=List[ProductOut])
+@product_router.get('/product_list_get', response=List[ProductOut])
 def get_products(request):
     products = Product.objects.all()
     return products
 
-@product_router.post('/products', response=ProductOut)
+@product_router.post('/product_create', response=ProductOut)
 def create_product(request, data: ProductIn):
     product = Product(
         name=data.name,

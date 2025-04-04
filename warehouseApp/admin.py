@@ -1,3 +1,12 @@
 from django.contrib import admin
+from warehouseApp.models import Warehouse
+from unfold.admin import ModelAdmin
 
-# Register your models here.
+@admin.register(Warehouse)
+class ProductAdmin(ModelAdmin):
+    list_display = [
+        'name',
+        'address'
+    ]
+
+
