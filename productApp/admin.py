@@ -1,13 +1,24 @@
 from django.contrib import admin
-from productApp.models import Product
+from productApp.models import Product, Stock
 from unfold.admin import ModelAdmin
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
     list_display = [
+        'id',
         'name',
         'product_type',
-        'price'
+        'product_description',
+        'price',
+        'warehouse'
+    ]
+
+@admin.register(Stock)
+class StockAdmin(ModelAdmin):
+    list_display = [
+        'product',
+        'warehouse',
+        'quantity',
     ]
 
 

@@ -11,5 +11,8 @@ class Warehouse(models.Model):
         verbose_name="Адрес"
     )
 
+    class Meta:
+        verbose_name_plural = 'Warehouse (Склады)'
+
     def __str__(self):
         return self.name
