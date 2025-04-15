@@ -24,3 +24,14 @@ class ProductIn(Schema):
 
     class Config:
         from_attributes = True
+
+class ProductImageIn(Schema):
+    product_id: int
+    alt_text: Optional[str] = None
+
+class ProductImageOut(Schema):
+    id: int
+    product: int
+    image_url: str
+    alt_text: Optional[str]
+    uploaded_at: str

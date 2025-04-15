@@ -1,5 +1,7 @@
 from typing import List
 from ninja import Router
+from ninja.errors import HttpError
+
 from warehouseApp.models import Warehouse
 from warehouseApp.schemas import WarehouseIn, WarehouseOut
 
@@ -18,3 +20,12 @@ def create_warehouse(request, data: WarehouseIn):
     )
     warehouse.save()
     return warehouse
+
+@warehouse_router.delete('/warehouse_delete')
+def delete_warehouse(request, warehouse_id: int):
+    try:
+        warehouse = Warehouse.objects.get(id=warehouse_id)
+        warehouse.delete()
+        return {"status": "success", "message": f"Склад {warehouse.name} удалён"}
+    except Warehouse.DoesNotExist:
+        raise HttpError(404, f"Склад с id={warehouse_id} не найден")
