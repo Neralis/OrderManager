@@ -12,8 +12,11 @@ from warehouseApp.models import Warehouse
 product_router = Router(tags=['Товары'])
 
 @product_router.get('/product_list_get', response=List[ProductOut])
-def get_products(request):
-    products = Product.objects.select_related("warehouse").all()
+def get_products(request, warehouse_id: Optional[int] = None):
+    if warehouse_id:
+        products = Product.objects.select_related("warehouse").filter(warehouse_id=warehouse_id)
+    else:
+        products = Product.objects.select_related("warehouse").all()
 
     result = []
     for p in products:
