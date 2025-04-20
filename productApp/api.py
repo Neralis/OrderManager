@@ -3,9 +3,11 @@ from django.db import models
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from ninja import Schema, Router, UploadedFile
+from ninja.errors import HttpError
+
 from productApp.models import Product, Stock, ProductImage
 from typing import List, Optional
-from productApp.schemas import ProductIn, ProductOut, ProductImageOut, ProductImageIn
+from productApp.schemas import ProductIn, ProductOut, ProductImageOut, ProductImageIn, ProductUpdate
 from warehouseApp.models import Warehouse
 
 # Роутер для всех эндпоинтов, относящихся к товарам
@@ -20,15 +22,38 @@ def get_products(request, warehouse_id: Optional[int] = None):
 
     result = []
     for p in products:
+        stock_warehouses = Stock.objects.filter(product=p, quantity__gt=0).values_list('warehouse_id', flat=True)
         result.append({
             "id": p.id,
             "name": p.name,
             "product_type": p.product_type,
             "product_description": p.product_description,
             "price": p.price,
-            "warehouse": p.warehouse.id
+            "warehouse": p.warehouse.id,
+            "warehouses_with_stock": list(stock_warehouses)
         })
     return result
+
+
+@product_router.get('/product_detail_get', response=ProductOut)
+def get_product_detail(request, product_id: int, warehouse_id: Optional[int] = None):
+    product = get_object_or_404(Product.objects.select_related("warehouse"), id=product_id)
+
+    if warehouse_id is not None and product.warehouse.id != warehouse_id:
+        raise HttpError(404, "Товар не найден на указанном складе")
+
+    stock_warehouses = Stock.objects.filter(product=product, quantity__gt=0).values_list('warehouse_id', flat=True)
+
+    return {
+        "id": product.id,
+        "name": product.name,
+        "product_type": product.product_type,
+        "product_description": product.product_description,
+        "price": product.price,
+        "warehouse": product.warehouse.id,
+        "warehouses_with_stock": list(stock_warehouses)
+    }
+
 
 @product_router.post('/product_create', response=ProductOut)
 def create_product(request, data: ProductIn):
@@ -48,6 +73,33 @@ def create_product(request, data: ProductIn):
         "product_description": product.product_description,
         "price": product.price,
         "warehouse": warehouse.id  # 👈 вернём только id
+    }
+
+@product_router.patch('/product_update/{product_id}', response=ProductOut)
+def update_product_partial(request, product_id: int, data: ProductUpdate):
+    product = get_object_or_404(Product, id=product_id)
+
+    if data.name is not None:
+        product.name = data.name
+    if data.product_type is not None:
+        product.product_type = data.product_type
+    if data.product_description is not None:
+        product.product_description = data.product_description
+    if data.price is not None:
+        product.price = data.price
+    if data.warehouse is not None:
+        warehouse = get_object_or_404(Warehouse, id=data.warehouse)
+        product.warehouse = warehouse
+
+    product.save()
+
+    return {
+        "id": product.id,
+        "name": product.name,
+        "product_type": product.product_type,
+        "product_description": product.product_description,
+        "price": product.price,
+        "warehouse": product.warehouse.id
     }
 
 @product_router.delete("/product_delete")
@@ -81,25 +133,32 @@ def delete_product(request, product_id: int):
 
 @product_router.get('/product_stock')
 def get_product_stock(request, product_id: int, warehouse_id: Optional[int] = None):
-    # Находим продукт
     product = Product.objects.get(id=product_id)
 
     if warehouse_id is not None:
-        # Если склад указан — получаем остаток на конкретном складе
         warehouse = Warehouse.objects.get(id=warehouse_id)
         stock = Stock.objects.filter(product=product, warehouse=warehouse).first()
 
         if stock:
-            return {"product": product.name, "warehouse": warehouse.name, "quantity": stock.quantity}
+            return {
+                "product": product.name,
+                "warehouse": warehouse.name,
+                "quantity": stock.quantity,
+                "warehouses_with_stock": [warehouse.id]
+            }
         else:
             return {"detail": "Нет остатков на складе для данного продукта."}
     else:
-        # Если склад не указан — получаем общее количество по всем складам
-        total_quantity = Stock.objects.filter(product=product).aggregate(total=Sum('quantity'))["total"] or 0
+        stocks = Stock.objects.filter(product=product, quantity__gt=0)
+        total_quantity = sum(stock.quantity for stock in stocks)
+        warehouse_ids = [stock.warehouse.id for stock in stocks]
+
         return {
             "product": product.name,
-            "total_quantity_all_warehouses": total_quantity
+            "total_quantity_all_warehouses": total_quantity,
+            "warehouses_with_stock": warehouse_ids
         }
+
 
 
 # Эндпоинт для добавления товара на склад

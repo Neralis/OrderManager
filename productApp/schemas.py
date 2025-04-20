@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from ninja import Schema
 from warehouseApp.models import Warehouse
@@ -13,6 +13,7 @@ class ProductOut(Schema):
     price: float
     warehouse: int
     product_description: Optional[str]
+    warehouses_with_stock: List[int]
 
 # Схема для ввода данных о продукте
 class ProductIn(Schema):
@@ -24,6 +25,13 @@ class ProductIn(Schema):
 
     class Config:
         from_attributes = True
+
+class ProductUpdate(Schema):
+    name: Optional[str] = None
+    product_type: Optional[str] = None
+    product_description: Optional[str] = None
+    price: Optional[float] = None
+    warehouse: Optional[int] = None
 
 class ProductImageIn(Schema):
     product_id: int
