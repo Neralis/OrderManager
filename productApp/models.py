@@ -21,6 +21,8 @@ class Product(models.Model):
         Warehouse,
         on_delete=models.CASCADE,
         related_name="products",
+        null=True,
+        blank=True,
     )
     product_description = models.CharField(
         max_length=255,

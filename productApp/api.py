@@ -72,7 +72,8 @@ def create_product(request, data: ProductIn):
         "product_type": product.product_type,
         "product_description": product.product_description,
         "price": product.price,
-        "warehouse": warehouse.id  # 👈 вернём только id
+        "warehouse": warehouse.id,  # 👈 вернём только id
+        "warehouses_with_stock": []
     }
 
 @product_router.patch('/product_update/{product_id}', response=ProductOut)
