@@ -16,9 +16,9 @@ product_router = Router(tags=['Товары'])
 @product_router.get('/product_list_get', response=List[ProductOut])
 def get_products(request, warehouse_id: Optional[int] = None):
     if warehouse_id:
-        products = Product.objects.select_related("warehouse").filter(warehouse_id=warehouse_id)
+        products = Product.objects.filter(stocks__warehouse_id=warehouse_id).distinct()
     else:
-        products = Product.objects.select_related("warehouse").all()
+        products = Product.objects.all()
 
     result = []
     for p in products:
@@ -29,7 +29,7 @@ def get_products(request, warehouse_id: Optional[int] = None):
             "product_type": p.product_type,
             "product_description": p.product_description,
             "price": p.price,
-            "warehouse": p.warehouse.id,
+            # "warehouse": p.warehouse.id,
             "warehouses_with_stock": list(stock_warehouses)
         })
     return result
@@ -50,20 +50,19 @@ def get_product_detail(request, product_id: int, warehouse_id: Optional[int] = N
         "product_type": product.product_type,
         "product_description": product.product_description,
         "price": product.price,
-        "warehouse": product.warehouse.id,
+        # "warehouse": product.warehouse.id,
         "warehouses_with_stock": list(stock_warehouses)
     }
 
 
 @product_router.post('/product_create', response=ProductOut)
 def create_product(request, data: ProductIn):
-    warehouse = get_object_or_404(Warehouse, id=data.warehouse)
 
     product = Product.objects.create(
         name=data.name,
         product_type=data.product_type,
         price=data.price,
-        warehouse=warehouse,  # без скобок!
+        # warehouse=warehouse,  # без скобок!
         product_description=data.product_description,
     )
     return {
@@ -72,7 +71,7 @@ def create_product(request, data: ProductIn):
         "product_type": product.product_type,
         "product_description": product.product_description,
         "price": product.price,
-        "warehouse": warehouse.id,  # 👈 вернём только id
+        # "warehouse": warehouse.id,  # 👈 вернём только id
         "warehouses_with_stock": []
     }
 
@@ -88,11 +87,11 @@ def update_product_partial(request, product_id: int, data: ProductUpdate):
         product.product_description = data.product_description
     if data.price is not None:
         product.price = data.price
-    if data.warehouse is not None:
-        warehouse = get_object_or_404(Warehouse, id=data.warehouse)
-        product.warehouse = warehouse
 
     product.save()
+
+    # добавляем warehouses_with_stock
+    stock_warehouses = Stock.objects.filter(product=product, quantity__gt=0).values_list('warehouse_id', flat=True)
 
     return {
         "id": product.id,
@@ -100,7 +99,7 @@ def update_product_partial(request, product_id: int, data: ProductUpdate):
         "product_type": product.product_type,
         "product_description": product.product_description,
         "price": product.price,
-        "warehouse": product.warehouse.id
+        "warehouses_with_stock": list(stock_warehouses)
     }
 
 @product_router.delete("/product_delete")
@@ -143,7 +142,7 @@ def get_product_stock(request, product_id: int, warehouse_id: Optional[int] = No
         if stock:
             return {
                 "product": product.name,
-                "warehouse": warehouse.name,
+                # "warehouse": warehouse.name,
                 "quantity": stock.quantity,
                 "warehouses_with_stock": [warehouse.id]
             }

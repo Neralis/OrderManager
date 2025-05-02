@@ -3,6 +3,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 from ninja import NinjaAPI
+
+from orderApp.api import order_router
 from productApp.api import product_router
 from userApp.api import auth_router
 from warehouseApp.api import warehouse_router
@@ -30,6 +32,7 @@ api = NinjaAPI(
 api.add_router('/products/', product_router)
 api.add_router('/warehouses/', warehouse_router)
 api.add_router('/auth/', auth_router)
+api.add_router('/orders/', order_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

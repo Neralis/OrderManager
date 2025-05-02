@@ -11,7 +11,7 @@ class ProductOut(Schema):
     name: str
     product_type: str
     price: float
-    warehouse: int
+    # warehouse: int
     product_description: Optional[str]
     warehouses_with_stock: List[int]
 
@@ -20,7 +20,7 @@ class ProductIn(Schema):
     name: str
     product_type: str
     price: float
-    warehouse: int
+    # warehouse: int
     product_description: Optional[str]
 
     class Config:
@@ -31,7 +31,7 @@ class ProductUpdate(Schema):
     product_type: Optional[str] = None
     product_description: Optional[str] = None
     price: Optional[float] = None
-    warehouse: Optional[int] = None
+    # warehouse: Optional[int] = None
 
 class ProductImageIn(Schema):
     product_id: int

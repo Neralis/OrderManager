@@ -10,7 +10,6 @@ class ProductAdmin(ModelAdmin):
         'product_type',
         'product_description',
         'price',
-        'warehouse'
     ]
 
 @admin.register(Stock)

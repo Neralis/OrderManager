@@ -17,13 +17,6 @@ class Product(models.Model):
         decimal_places=2,
         verbose_name="Цена"
     )
-    warehouse = models.ForeignKey(
-        Warehouse,
-        on_delete=models.CASCADE,
-        related_name="products",
-        null=True,
-        blank=True,
-    )
     product_description = models.CharField(
         max_length=255,
         verbose_name="Описание товара",
