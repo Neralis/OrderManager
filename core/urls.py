@@ -6,6 +6,7 @@ from ninja import NinjaAPI
 
 from orderApp.api import order_router
 from productApp.api import product_router
+from reportApp.api import report_router
 from userApp.api import auth_router
 from warehouseApp.api import warehouse_router
 from ninja_jwt.authentication import JWTAuth
@@ -33,6 +34,7 @@ api.add_router('/products/', product_router)
 api.add_router('/warehouses/', warehouse_router)
 api.add_router('/auth/', auth_router)
 api.add_router('/orders/', order_router)
+api.add_router('/report/', report_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

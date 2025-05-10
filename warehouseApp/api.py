@@ -13,6 +13,12 @@ def get_warehouses(request):
     warehouses = Warehouse.objects.all()
     return warehouses
 
+@warehouse_router.get('/warehouse/{warehouse_id}', response=WarehouseOut)
+def get_warehouse_detail(request, warehouse_id: int):
+    warehouse = get_object_or_404(Warehouse, id=warehouse_id)
+    return warehouse
+
+
 @warehouse_router.post('/warehouse_create', response=WarehouseOut)
 def create_warehouse(request, data: WarehouseIn):
     warehouse = Warehouse(

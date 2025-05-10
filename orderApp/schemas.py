@@ -16,6 +16,7 @@ class OrderItemOut(Schema):
     product_id: int
     name: str
     quantity: int
+    price: float
 
 class OrderOut(Schema):
     id: int
@@ -24,6 +25,7 @@ class OrderOut(Schema):
     warehouse: int
     qr_code: Optional[str]
     items: List[OrderItemOut]
+    total_price: float
 
 class OrderStatusIn(Schema):
     status: str

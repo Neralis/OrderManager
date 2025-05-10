@@ -16,6 +16,10 @@ class Order(models.Model):
     warehouse = models.ForeignKey('warehouseApp.Warehouse', on_delete=models.CASCADE)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
 
+    @property
+    def total_price(self):
+        return sum(item.price * item.quantity for item in self.items.all())
+
     def __str__(self):
         return f"Order #{self.id} ({self.get_status_display()})"
 
@@ -23,6 +27,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey('productApp.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"

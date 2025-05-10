@@ -37,10 +37,17 @@ def get_products(request, warehouse_id: Optional[int] = None):
 
 @product_router.get('/product_detail_get', response=ProductOut)
 def get_product_detail(request, product_id: int, warehouse_id: Optional[int] = None):
-    product = get_object_or_404(Product.objects.select_related("warehouse"), id=product_id)
+    product = get_object_or_404(Product, id=product_id)
 
-    if warehouse_id is not None and product.warehouse.id != warehouse_id:
-        raise HttpError(404, "Товар не найден на указанном складе")
+    current_warehouse = None
+    current_quantity = None
+
+    if warehouse_id is not None:
+        stock = Stock.objects.filter(product=product, warehouse_id=warehouse_id).first()
+        if not stock or stock.quantity <= 0:
+            raise HttpError(404, "Товар не найден на указанном складе")
+        current_warehouse = warehouse_id
+        current_quantity = stock.quantity
 
     stock_warehouses = Stock.objects.filter(product=product, quantity__gt=0).values_list('warehouse_id', flat=True)
 
@@ -50,7 +57,8 @@ def get_product_detail(request, product_id: int, warehouse_id: Optional[int] = N
         "product_type": product.product_type,
         "product_description": product.product_description,
         "price": product.price,
-        # "warehouse": product.warehouse.id,
+        "current_warehouse": current_warehouse,
+        "current_quantity": current_quantity,
         "warehouses_with_stock": list(stock_warehouses)
     }
 
