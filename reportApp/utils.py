@@ -18,8 +18,7 @@ def export_filtered_orders_to_xlsx(request):
     start = parse_date(start_raw) if start_raw else None
     end = parse_date(end_raw) if end_raw else None
 
-    # Далее фильтрация заказов
-    orders = Order.objects.all()
+    orders = Order.objects.prefetch_related('items__product').select_related('warehouse')
     if start:
         orders = orders.filter(created_at__date__gte=start)
     if end:
@@ -29,40 +28,59 @@ def export_filtered_orders_to_xlsx(request):
     sheet = workbook.active
     sheet.title = "Заказы"
 
-    headers = ["ID заказа", "Статус", "Склад", "Дата создания", "Продукт", "Количество"]
+    headers = [
+        "ID заказа", "Статус", "Склад", "Дата создания",
+        "Клиент", "Адрес", "Комментарий", "Причина отмены",
+        "Продукт", "Количество", "Цена за единицу", "Сумма по товару", "Итоговая сумма заказа"
+    ]
     sheet.append(headers)
+
     for cell in sheet[1]:
         cell.font = Font(bold=True)
 
-    # Цвета по статусам
     status_colors = {
-        "new": "FFFACD",         # light yellow
-        "processing": "ADD8E6",  # light blue
-        "completed": "90EE90",   # light green
-        "returned": "FFB6C1",    # light pink
+        "new": "FFFACD",
+        "processing": "ADD8E6",
+        "shipped": "87CEEB",
+        "completed": "90EE90",
+        "cancelled": "FFC0CB",
     }
 
-    for order in orders.prefetch_related('items__product'):
+    for order in orders:
         for item in order.items.all():
             sheet.append([
                 order.id,
                 order.status,
-                order.warehouse.name,
+                order.warehouse.name if order.warehouse else "—",
                 order.created_at.strftime("%Y-%m-%d %H:%M"),
+                order.client_name,
+                order.destination_address,
+                order.comment,
+                order.cancellation_reason,
                 item.product.name,
-                item.quantity
+                item.quantity,
+                float(item.price),
+                float(item.price) * item.quantity,
+                float(order.total_price)
             ])
-            # Цветовая заливка для ячейки со статусом
-            last_row = sheet.max_row
-            status_cell = sheet.cell(row=last_row, column=2)
-            color = status_colors.get(order.status)
-            if color:
-                status_cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+
+            # Цветовая заливка по статусу
+            row_num = sheet.max_row
+            status_cell = sheet.cell(row=row_num, column=2)
+            fill_color = status_colors.get(order.status)
+            if fill_color:
+                status_cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+
+    # Автоширина
+    for col in sheet.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        sheet.column_dimensions[col[0].column_letter].width = max_len + 2
 
     response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response["Content-Disposition"] = f"attachment; filename=orders_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     workbook.save(response)
     return response
+
 
 
 def export_stock_to_xlsx(request):
@@ -85,7 +103,6 @@ def export_stock_to_xlsx(request):
             stock.quantity
         ])
 
-    # Автоширина колонок
     for col in sheet.columns:
         max_length = max(len(str(cell.value or "")) for cell in col)
         col_letter = col[0].column_letter
@@ -99,49 +116,63 @@ def export_stock_to_xlsx(request):
     workbook.save(response)
     return response
 
+
 def export_single_order_to_xlsx(request, order_id: int):
     order = Order.objects.prefetch_related('items__product').select_related('warehouse').get(id=order_id)
 
-    # Создание Excel
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = f"Заказ {order.id}"
 
-    # Заголовки
-    headers = ["ID заказа", "Статус", "Склад", "Дата создания", "Продукт", "Количество"]
-    ws.append(headers)
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
+    # Общие сведения о заказе
+    order_info = [
+        ("ID заказа", order.id),
+        ("Статус", order.status),
+        ("Дата создания", order.created_at.strftime("%Y-%m-%d %H:%M")),
+        ("Склад", order.warehouse.name if order.warehouse else "—"),
+        ("Клиент", order.client_name),
+        ("Адрес доставки", order.destination_address),
+        ("Комментарий", order.comment or "—"),
+        ("Причина отмены", order.cancellation_reason or "—"),
+        ("Итоговая сумма", float(order.total_price)),
+    ]
 
-    # Добавление строк заказа
-    for item in order.items.all():
-        ws.append([
-            order.id,
-            order.status,
-            order.warehouse.name if order.warehouse else "—",
-            order.created_at.strftime("%Y-%m-%d %H:%M"),
-            item.product.name,
-            item.quantity
-        ])
+    for idx, (label, value) in enumerate(order_info, start=1):
+        ws.cell(row=idx, column=1, value=label).font = Font(bold=True)
+        ws.cell(row=idx, column=2, value=value)
 
-    # Генерация QR-кода
-    qr_data = f"Order ID: {order.id}\nStatus: {order.status}\nCreated: {order.created_at.strftime('%Y-%m-%d %H:%M')}"
-    qr_img = qrcode.make(qr_data)
+    start_row = len(order_info) + 2
+    ws.cell(row=start_row, column=1, value="Продукты").font = Font(bold=True)
+    headers = ["Продукт", "Количество", "Цена за единицу", "Сумма"]
+    for col, header in enumerate(headers, start=1):
+        ws.cell(row=start_row + 1, column=col, value=header).font = Font(bold=True)
 
+    for idx, item in enumerate(order.items.all(), start=1):
+        row = start_row + 1 + idx
+        ws.cell(row=row, column=1, value=item.product.name)
+        ws.cell(row=row, column=2, value=item.quantity)
+        ws.cell(row=row, column=3, value=float(item.price))
+        ws.cell(row=row, column=4, value=float(item.price) * item.quantity)
+
+    # QR-код
+    qr_text = (
+        f"Order ID: {order.id}\nStatus: {order.status}\nClient: {order.client_name}\n"
+        f"Total: {order.total_price}\nCreated: {order.created_at.strftime('%Y-%m-%d %H:%M')}"
+    )
+    qr_img = qrcode.make(qr_text)
     img_io = BytesIO()
     qr_img.save(img_io, format='PNG')
     img_io.seek(0)
-
     img = OpenpyxlImage(img_io)
     img.width = 150
     img.height = 150
+    ws.add_image(img, f"F2")
 
-    # Вставка QR-кода ниже данных
-    last_row = ws.max_row + 2
-    img_anchor = f"A{last_row}"
-    ws.add_image(img, img_anchor)
+    # Автоширина
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = max_length + 2
 
-    # Сохраняем файл и отправляем
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
