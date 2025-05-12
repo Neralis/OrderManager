@@ -11,6 +11,10 @@ class OrderItemIn(Schema):
 class OrderIn(Schema):
     warehouse_id: int
     items: List[OrderItemIn]
+    client_name: str  # 🆕
+    destination_address: str  # 🆕
+    comment: Optional[str] = None  # 🆕
+
 
 class OrderItemOut(Schema):
     product_id: int
@@ -26,6 +30,12 @@ class OrderOut(Schema):
     qr_code: Optional[str]
     items: List[OrderItemOut]
     total_price: float
+    client_name: str  # 🆕
+    destination_address: str  # 🆕
+    comment: Optional[str] = None  # 🆕
+    total_price: float  # 🆕
+    cancellation_reason: str | None = None
+
 
 class OrderStatusIn(Schema):
     status: str
@@ -54,3 +64,6 @@ class ReturnOut(Schema):
     reason: Optional[str]
     created_at: str
     items: List[ReturnItemOut]
+
+class OrderCancellationIn(Schema):  # 🆕 NEW
+    reason: str

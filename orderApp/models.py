@@ -13,8 +13,13 @@ class Order(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
-    warehouse = models.ForeignKey('warehouseApp.Warehouse', on_delete=models.CASCADE)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
+
+    client_name = models.CharField(max_length=100)
+    destination_address = models.TextField()
+    comment = models.TextField(blank=True)
+    cancellation_reason = models.TextField(blank=True, null=True)
 
     @property
     def total_price(self):
@@ -25,7 +30,7 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey('productApp.Product', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
