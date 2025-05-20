@@ -1,20 +1,14 @@
-import secrets
-
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login
+from django.http import HttpRequest
 from ninja import Router
-from rest_framework_simplejwt.tokens import RefreshToken
-
-from userApp.schemas import AuthIn, TokenOut
+from userApp.schemas import AuthIn, AuthOut
 
 auth_router = Router(tags=["Аутентификация"])
 
-@auth_router.post("/login", response={200: TokenOut, 401: dict}, auth=None)
-def login(request, data: AuthIn):
-    user = authenticate(username=data.username, password=data.password)
-    if user:
-        refresh = RefreshToken.for_user(user)
-        return {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh)
-        }
-    return 401, {"detail": "Неверный логин или пароль"}
+@auth_router.post("/login", response=AuthOut)
+def login_view(request: HttpRequest, data: AuthIn):
+    user = authenticate(request, username=data.username, password=data.password)
+    if user is not None:
+        login(request, user)  # Сохраняет сессию
+        return {"success": True, "message": "Login successful"}
+    return {"success": False, "message": "Invalid credentials"}
