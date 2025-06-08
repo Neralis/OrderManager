@@ -26,6 +26,7 @@ def get_user_info(request: HttpRequest):
             "id": request.user.id,
             "username": request.user.username,
             "email": request.user.email,
+            "groups": [group.name for group in request.user.groups.all()],
             "is_authenticated": True
         }
     return {"is_authenticated": False}

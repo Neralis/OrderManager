@@ -1,19 +1,20 @@
 from django.core.files.storage import default_storage
 from django.db import models
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from ninja import Schema, Router, UploadedFile
 from ninja.errors import HttpError
-
 from productApp.models import Product, Stock, ProductImage
 from typing import List, Optional
 from productApp.schemas import ProductIn, ProductOut, ProductImageOut, ProductImageIn, ProductUpdate
 from warehouseApp.models import Warehouse
+from userApp.utils import group_required
 
 # Роутер для всех эндпоинтов, относящихся к товарам
 product_router = Router(tags=['Товары'])
 
+
 @product_router.get('/product_list_get', response=List[ProductOut])
+#@group_required("admin")
 def get_products(request, warehouse_id: Optional[int] = None):
     if warehouse_id:
         products = Product.objects.filter(stocks__warehouse_id=warehouse_id).distinct()

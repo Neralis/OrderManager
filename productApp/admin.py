@@ -11,6 +11,13 @@ class ProductAdmin(ModelAdmin):
         'product_description',
         'price',
     ]
+    list_filter = [
+        'product_type',
+        'price',
+    ]
+    search_fields = ['name', 'product_description']
+    list_per_page = 20
+    show_full_result_count = True
 
 @admin.register(Stock)
 class StockAdmin(ModelAdmin):
@@ -19,5 +26,12 @@ class StockAdmin(ModelAdmin):
         'warehouse',
         'quantity',
     ]
+    list_filter = [
+        'warehouse',
+        'quantity',
+    ]
+    search_fields = ['product__name', 'warehouse']
+    list_per_page = 20
+    show_full_result_count = True
 
 
